@@ -26,9 +26,9 @@ using namespace std;
 
 static int year = 0;
 static int speedScale = 1;
-static bool paused = true; //Start off paused
+//static bool paused = true; //Start off paused
 
-static float k = 50;
+static int k = 100;
 static float xrot;
 static float yrot;
 static float zoom = 10;
@@ -43,7 +43,7 @@ void init(void)
 
 float bivariate(float x, float y)
 {
-        .5*exp(-.04*sqrt(pow(80 * x -40, 2) + pow(90 * y-45, 2))) * cos(0.15*sqrt(pow(80 * x-40, 2) + pow(90 * y-45, 2)));
+        return (.5*exp(-.04*sqrt(pow(80 * x -40, 2) + pow(90 * y-45, 2))) * cos(0.15*sqrt(pow(80 * x-40, 2) + pow(90 * y-45, 2))));
 }
 
 void display(void)
@@ -56,18 +56,141 @@ void display(void)
         glRotatef (yrot, 0.0, 1.0, 0.0);
         glRotatef (xrot, 1.0, 0.0, 0.0);
 
-        int x;
-        int y;
+        float v[(k + 1) * (k + 1)][3];
+        float ltri[(k + 1) * (k + 1)][3];
+        float vn[(k + 1) * (k + 1)][3];
+        float tn[2 * (k * k)];
+        float h = 1.0/k;
+        float j;
+        float i;
+        float x;
+        float y;
+        int i1 = 0;
+        int i2 = 0;
+        int i3 = 0;
+        int indv = 0;
+        int indt = 0;
 
-        for(x = 0; x <= k; x++)
+        //Store verices
+        for (j = 0; j <=k; j++)
         {
+                y = j * h;
+                for (i = 0; i <=k; i++)
+                {
+                        x = i*h;
+                        v[indv][0] = x - .5;
+                        v[indv][1] = y - .5;
+                        v[indv][2] = bivariate(x,y);
+                        indv = indv + 1;
+                }
+        }
+
+        //Draw all vertices
+        int w;
+        /*for (w = 0; w <= (k + 1) * (k + 1); w++)
+        {
+                glBegin(GL_POINTS);
+                glVertex3f(v[w][0], v[w][1], v[w][2]);
+                glEnd();
+        }*/
+
+        //Store triangles
+        for(j = 1; j <= k; j++)
+        {
+                for(i = 1; i <= k; i++)
+                {
+                        indv = j * (k + 1) + i;
+
+                        ltri[indt][0] = indv - k - 2;
+                        ltri[indt][1] = indv - k - 1;
+                        ltri[indt][2] = indv;
+                        ltri[indt+1][0] = indv - k - 2;
+                        ltri[indt+1][1] = indv;
+                        ltri[indt+1][2] = indv - 1;
+                        indt = indt + 2;
+                }
+        }
+
+        //Initialize normals
+        for(indv = 0; indv <= (k + 1) * (k + 1) - 1; indv++)
+        {
+                vn[indv][0] = 0;
+                vn[indv][1] = 0;
+                vn[indv][2] = 0;
+        }
+
+        //Normalize
+        for(indv = 0; indv <= (k + 1) * (k + 1) - 1; indv++)
+        {
+                float magnitude;
+
+                magnitude = sqrt((vn[indv][0] * vn[indv][0]) + (vn[indv][1] * vn[indv][1]) + (vn[indv][2] * vn[indv][2]));
+
+                vn[indv][0] = vn[indv][0] / magnitude;
+                vn[indv][1] = vn[indv][1] / magnitude;
+                vn[indv][2] = vn[indv][2] / magnitude;
+        }
+
+        //Add triangle normals to vertex normals
+        for(indt = 0; indt <= 2 * (k * k); indt++)
+        {
+                i1 = ltri[indt][0];
+                i2 = ltri[indt][1];
+                i3 = ltri[indt][2];
+
+                tn[0] = (v[i2][1]-v[i1][1])*(v[i3][2]-v[i1][2])-
+                        (v[i2][2]-v[i1][2])*(v[i3][1]-v[i1][1]);
+
+                tn[0] = (v[i2][2]-v[i1][2])*(v[i3][0]-v[i1][0])-
+                        (v[i2][0]-v[i1][0])*(v[i3][2]-v[i1][2]);
+
+                tn[0] = (v[i2][0]-v[i1][0])*(v[i3][1]-v[i1][1])-
+                        (v[i2][1]-v[i1][1])*(v[i3][0]-v[i1][0]);
+
+                //Normalize tn
+                float magnitude;
+
+                magnitude = sqrt((tn[0] * tn[0]) + (tn[1] * tn[1]) + (tn[2] * tn[2]));
+
+                tn[0] = tn[0] / magnitude;
+                tn[1] = tn[1] / magnitude;
+                tn[2] = tn[2] / magnitude;
+
+                vn[i1][0] += tn[0];
+                vn[i1][1] += tn[1];
+                vn[i1][2] += tn[2];
+
+                vn[i2][0] += tn[0];
+                vn[i2][1] += tn[1];
+                vn[i2][2] += tn[2];
+
+                vn[i3][0] += tn[0];
+                vn[i3][1] += tn[1];
+                vn[i3][2] += tn[2];
+        }
+
+        //Store triangles
+        /*for(w = 0; w <= k; w++)
+        {
+                glBegin(GL_TRIANGLES);
+                glVertex3f(v[ltri[w][0]][0], v[ltri[w][0]][1], v[ltri[w][0]][2]);
+                glVertex3f(v[ltri[w][1]][0], v[ltri[w][1]][1], v[ltri[w][1]][2]);
+                glVertex3f(v[ltri[w][2]][0], v[ltri[w][2]][1], v[ltri[w][2]][2]);
+                glEnd();
+        }*/
+
+        //int x;
+        //int y;
+
+        /*for(x = 0; x <= k; x++)
+           {
                 for(y = 0; y <= k; y++)
                 {
                         glBegin(GL_POINTS);
                         glVertex3f((x / k) - .5, (y / k) - .5, bivariate((x / k) - .5, (y / k) - .5));
                         glEnd();
                 }
-        }
+           }*/
 
         /*glTranslatef (5.0, -4.0, 0.0);
            glRotatef ((GLfloat) -year * speedScale, 1.0, 1.0, 1.0);
