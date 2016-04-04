@@ -37,6 +37,13 @@ void init(void)
 {
         glClearColor (0.0, 0.0, 0.0, 0.0);
         glShadeModel (GL_SMOOTH);
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        GLfloat lightColor0[] = {0, 1, 1, 1.0}; //Color (0.5, 0.5, 0.5)
+        GLfloat lightPos0[] = {10.0f, 0.0f, 0.0f, 1.0f}; //Positioned at (4, 0, 8)
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
+        glEnable(GL_DEPTH_TEST);
 }
 
 float bivariate(float x, float y)
@@ -83,9 +90,6 @@ void display(void)
                 }
         }
 
-
-
-
         //Draw all vertices
         /*int w;
            for (w = 0; w <= (k + 1) * (k + 1); w++)
@@ -126,7 +130,8 @@ void display(void)
                 float magnitude;
 
                 magnitude = sqrt((vn[indv][0] * vn[indv][0]) + (vn[indv][1] * vn[indv][1]) + (vn[indv][2] * vn[indv][2]));
-
+                //cout<<magnitude<<endl;
+                magnitude = 1;
                 vn[indv][0] = vn[indv][0] / magnitude;
                 vn[indv][1] = vn[indv][1] / magnitude;
                 vn[indv][2] = vn[indv][2] / magnitude;
@@ -142,24 +147,27 @@ void display(void)
                 tn[0] = (v[i2][1]-v[i1][1])*(v[i3][2]-v[i1][2])-
                         (v[i2][2]-v[i1][2])*(v[i3][1]-v[i1][1]);
 
-                tn[0] = (v[i2][2]-v[i1][2])*(v[i3][0]-v[i1][0])-
+                tn[1] = (v[i2][2]-v[i1][2])*(v[i3][0]-v[i1][0])-
                         (v[i2][0]-v[i1][0])*(v[i3][2]-v[i1][2]);
 
-                tn[0] = (v[i2][0]-v[i1][0])*(v[i3][1]-v[i1][1])-
+                tn[2] = (v[i2][0]-v[i1][0])*(v[i3][1]-v[i1][1])-
                         (v[i2][1]-v[i1][1])*(v[i3][0]-v[i1][0]);
 
                 //Normalize tn
                 float magnitude;
 
                 magnitude = sqrt((tn[0] * tn[0]) + (tn[1] * tn[1]) + (tn[2] * tn[2]));
+                //cout<<magnitude<<endl;
 
                 tn[0] = tn[0] / magnitude;
                 tn[1] = tn[1] / magnitude;
                 tn[2] = tn[2] / magnitude;
 
+                //cout<<vn[i1][0]<<endl;
                 vn[i1][0] += tn[0];
                 vn[i1][1] += tn[1];
                 vn[i1][2] += tn[2];
+                //cout<<vn[i1][0]<<endl<<endl;
 
                 vn[i2][0] += tn[0];
                 vn[i2][1] += tn[1];
@@ -189,28 +197,28 @@ void display(void)
                         indv = 1;
 
                         glBegin(GL_TRIANGLES);
+                        glNormal3f(vn[ltri[indt][0]][0],vn[ltri[indt][0]][1],vn[ltri[indt][0]][2]);
                         glVertex3f(v[ltri[indt][0]][0], v[ltri[indt][0]][1], v[ltri[indt][0]][2]);
+
+                        glNormal3f(vn[ltri[indt][1]][0],vn[ltri[indt][1]][1],vn[ltri[indt][1]][2]);
                         glVertex3f(v[ltri[indt][1]][0], v[ltri[indt][1]][1], v[ltri[indt][1]][2]);
+
+                        glNormal3f(vn[ltri[indt][2]][0],vn[ltri[indt][2]][1],vn[ltri[indt][2]][2]);
                         glVertex3f(v[ltri[indt][2]][0], v[ltri[indt][2]][1], v[ltri[indt][2]][2]);
+
+                        //Second pairs
+                        glNormal3f(vn[ltri[indt][0]][0],vn[ltri[indt][0]][1],vn[ltri[indt][0]][2]);
+                        glVertex3f(v[ltri[indt + 1][0]][0], v[ltri[indt + 1][0]][1], v[ltri[indt + 1][0]][2]);
+
+                        glNormal3f(vn[ltri[indt + 1][1]][0],vn[ltri[indt + 1][1]][1],vn[ltri[indt + 1][1]][2]);
+                        glVertex3f(v[ltri[indt + 1][1]][0], v[ltri[indt + 1][1]][1], v[ltri[indt + 1][1]][2]);
+
+                        glNormal3f(vn[ltri[indt + 1][2]][0],vn[ltri[indt + 1][2]][1],vn[ltri[indt + 1][2]][2]);
+                        glVertex3f(v[ltri[indt + 1][2]][0], v[ltri[indt + 1][2]][1], v[ltri[indt + 1][2]][2]);
                         glEnd();
-                        //cout<<v[ltri[indt][0]][0]<<" "<<v[ltri[indt][0]][1]<<" "<<v[ltri[indt][0]][2]<<endl;
-                        //cout<<v[ltri[indt][1]][0]<<" "<<v[ltri[indt][1]][1]<<" "<<v[ltri[indt][1]][2]<<endl;
-                        //cout<<v[ltri[indt][2]][0]<<" "<<v[ltri[indt][2]][1]<<" "<<v[ltri[indt][2]][2]<<endl;
-                        //cout<<ltri[indt][0]<<" "<<v[ltri[indt][0]][0]<<endl<<endl;
 
+                        //cout<<vn[ltri[indt][0]][0]<<" "<<vn[ltri[indt][0]][1]<<" "<<vn[ltri[indt][0]][2]<<endl;
 
-                        /*glBegin(GL_TRIANGLES);
-                           glVertex3f(v[ltri[indt + 1][0]][0], v[ltri[indt + 1][0]][1], v[ltri[indt + 1][0]][2]);
-                           glVertex3f(v[ltri[indt + 1][1]][0], v[ltri[indt + 1][1]][1], v[ltri[indt + 1][1]][2]);
-                           glVertex3f(v[ltri[indt + 1][2]][0], v[ltri[indt + 1][2]][1], v[ltri[indt + 1][2]][2]);
-                           glEnd();*/
-
-                        /*ltri[indt][0] = indv - k - 2;
-                           ltri[indt][1] = indv - k - 1;
-                           ltri[indt][2] = indv;
-                           ltri[indt+1][0] = indv - k - 2;
-                           ltri[indt+1][1] = indv;
-                           ltri[indt+1][2] = indv - 1;*/
                         indt = indt + 2;
                 }
         }
