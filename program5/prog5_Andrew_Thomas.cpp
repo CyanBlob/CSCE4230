@@ -28,7 +28,7 @@ static int year = 0;
 static int speedScale = 1;
 //static bool paused = true; //Start off paused
 
-static int k = 100;
+static int k = 30;
 static float xrot;
 static float yrot;
 static float zoom = 10;
@@ -36,10 +36,8 @@ static float zoom = 10;
 void init(void)
 {
         glClearColor (0.0, 0.0, 0.0, 0.0);
-        glShadeModel (GL_FLAT);
+        glShadeModel (GL_SMOOTH);
 }
-
-//Draw 5 planets, each doing something different
 
 float bivariate(float x, float y)
 {
@@ -48,7 +46,7 @@ float bivariate(float x, float y)
 
 void display(void)
 {
-        glClear (GL_COLOR_BUFFER_BIT);
+        glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glColor3f (1.0, 1.0, 1.0);
 
         glPushMatrix();
@@ -57,7 +55,7 @@ void display(void)
         glRotatef (xrot, 1.0, 0.0, 0.0);
 
         float v[(k + 1) * (k + 1)][3];
-        float ltri[(k + 1) * (k + 1)][3];
+        int ltri[2 * (k * k)][3];
         float vn[(k + 1) * (k + 1)][3];
         float tn[2 * (k * k)];
         float h = 1.0/k;
@@ -85,14 +83,17 @@ void display(void)
                 }
         }
 
+
+
+
         //Draw all vertices
-        int w;
-        /*for (w = 0; w <= (k + 1) * (k + 1); w++)
-        {
+        /*int w;
+           for (w = 0; w <= (k + 1) * (k + 1); w++)
+           {
                 glBegin(GL_POINTS);
                 glVertex3f(v[w][0], v[w][1], v[w][2]);
                 glEnd();
-        }*/
+           }*/
 
         //Store triangles
         for(j = 1; j <= k; j++)
@@ -132,7 +133,7 @@ void display(void)
         }
 
         //Add triangle normals to vertex normals
-        for(indt = 0; indt <= 2 * (k * k); indt++)
+        for(indt = 0; indt < 2 * (k * k); indt++)
         {
                 i1 = ltri[indt][0];
                 i2 = ltri[indt][1];
@@ -168,58 +169,51 @@ void display(void)
                 vn[i3][1] += tn[1];
                 vn[i3][2] += tn[2];
         }
-
-        //Store triangles
-        /*for(w = 0; w <= k; w++)
-        {
-                glBegin(GL_TRIANGLES);
-                glVertex3f(v[ltri[w][0]][0], v[ltri[w][0]][1], v[ltri[w][0]][2]);
-                glVertex3f(v[ltri[w][1]][0], v[ltri[w][1]][1], v[ltri[w][1]][2]);
-                glVertex3f(v[ltri[w][2]][0], v[ltri[w][2]][1], v[ltri[w][2]][2]);
-                glEnd();
-        }*/
-
-        //int x;
-        //int y;
-
-        /*for(x = 0; x <= k; x++)
+        //Draw triangles
+        /*for(indt = 0; indt < 2 * (k * k); indt++)
            {
-                for(y = 0; y <= k; y++)
-                {
-                        glBegin(GL_POINTS);
-                        glVertex3f((x / k) - .5, (y / k) - .5, bivariate((x / k) - .5, (y / k) - .5));
-                        glEnd();
-                }
+                glBegin(GL_TRIANGLES);
+                glVertex3f(v[ltri[indt][0]][0], v[ltri[indt][0]][1], v[ltri[indt][0]][2]);
+                glVertex3f(v[ltri[indt][1]][0], v[ltri[indt][1]][1], v[ltri[indt][1]][2]);
+                glVertex3f(v[ltri[indt][2]][0], v[ltri[indt][2]][1], v[ltri[indt][2]][2]);
+                glEnd();
+                //cout<<v[ltri[indt][0]][0]<<" "<<v[ltri[indt][0]][1]<<" "<<v[ltri[indt][0]][2]<<endl;
+                //cout<<v[ltri[indt][1]][0]<<" "<<v[ltri[indt][1]][1]<<" "<<v[ltri[indt][1]][2]<<endl;
+                //cout<<v[ltri[indt][2]][0]<<" "<<v[ltri[indt][2]][1]<<" "<<v[ltri[indt][2]][2]<<endl<<endl;
            }*/
+        indt = 0;
+        for(j = 1; j <= k; j++)
+        {
+                for(i = 1; i <= k; i++)
+                {
+                        indv = 1;
 
-        /*glTranslatef (5.0, -4.0, 0.0);
-           glRotatef ((GLfloat) -year * speedScale, 1.0, 1.0, 1.0);
-           glutWireSphere(.5, 20, 16); //Spinning planet
-           glRotatef ((GLfloat) year * speedScale, 1.0, 1.0, 1.0);
-           glTranslatef (-5.0, 4.0, 0.0);
-
-
-           glRotatef ((GLfloat) -year * speedScale, 1.0, 1.0, 1.0);
-           glTranslatef (-5.0, -2.0, 0.0);
-           glutWireSphere(.5, 20, 16); //3D axis planet
-           glTranslatef (5.0, 2.0, 0.0);
-           glRotatef ((GLfloat) year * speedScale, 1.0, 1.0, 1.0);
-
-
-           glTranslatef (3.0, 2.0, 0.0);
-           glRotatef ((GLfloat) (year / 2) * speedScale, 0.0, 0.0, 1.0);
-           glutWireSphere(.5, 20, 16); //Draw sun
+                        glBegin(GL_TRIANGLES);
+                        glVertex3f(v[ltri[indt][0]][0], v[ltri[indt][0]][1], v[ltri[indt][0]][2]);
+                        glVertex3f(v[ltri[indt][1]][0], v[ltri[indt][1]][1], v[ltri[indt][1]][2]);
+                        glVertex3f(v[ltri[indt][2]][0], v[ltri[indt][2]][1], v[ltri[indt][2]][2]);
+                        glEnd();
+                        //cout<<v[ltri[indt][0]][0]<<" "<<v[ltri[indt][0]][1]<<" "<<v[ltri[indt][0]][2]<<endl;
+                        //cout<<v[ltri[indt][1]][0]<<" "<<v[ltri[indt][1]][1]<<" "<<v[ltri[indt][1]][2]<<endl;
+                        //cout<<v[ltri[indt][2]][0]<<" "<<v[ltri[indt][2]][1]<<" "<<v[ltri[indt][2]][2]<<endl;
+                        //cout<<ltri[indt][0]<<" "<<v[ltri[indt][0]][0]<<endl<<endl;
 
 
-           glTranslatef (3.0, 0.0, 0.0);
-           glutWireSphere(.3, 20, 16); //Draw planet
+                        /*glBegin(GL_TRIANGLES);
+                           glVertex3f(v[ltri[indt + 1][0]][0], v[ltri[indt + 1][0]][1], v[ltri[indt + 1][0]][2]);
+                           glVertex3f(v[ltri[indt + 1][1]][0], v[ltri[indt + 1][1]][1], v[ltri[indt + 1][1]][2]);
+                           glVertex3f(v[ltri[indt + 1][2]][0], v[ltri[indt + 1][2]][1], v[ltri[indt + 1][2]][2]);
+                           glEnd();*/
 
-           glRotatef ((GLfloat) (year / 2) * speedScale, 0.0, 0.0, 1.0);
-
-           glTranslatef (.7, 0.0, 0.0);
-
-
-           glutWireSphere(0.1, 10, 8); //Draw moon*/
+                        /*ltri[indt][0] = indv - k - 2;
+                           ltri[indt][1] = indv - k - 1;
+                           ltri[indt][2] = indv;
+                           ltri[indt+1][0] = indv - k - 2;
+                           ltri[indt+1][1] = indv;
+                           ltri[indt+1][2] = indv - 1;*/
+                        indt = indt + 2;
+                }
+        }
 
         glPopMatrix();
         glutSwapBuffers(); //Animate scene
@@ -316,7 +310,7 @@ void rotateYear()
 int main(int argc, char** argv)
 {
         glutInit(&argc, argv);
-        glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB);
+        glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
         glutInitWindowSize (500, 500);
         glutInitWindowPosition (100, 100);
         glutCreateWindow (argv[0]);
