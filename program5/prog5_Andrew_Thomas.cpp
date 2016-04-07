@@ -32,14 +32,16 @@ static float zoom = 10;
 
 void init(void)
 {
+    //const GLint* i = 1;
         glClearColor (0.0, 0.0, 0.0, 0.0);
         glShadeModel (GL_SMOOTH);
 
         //Enable lighting for the front of the mesh
         glEnable(GL_LIGHTING);
         glEnable(GL_LIGHT0);
+        glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
         GLfloat lightColor0[] = {1, 1, 1, 0.0};
-        GLfloat lightPos0[] = {5.0f, 0.0f, 5.0f, 1.0f}; //Positioned at (5, 0, 5)
+        GLfloat lightPos0[] = {10.0f, 0.0f, 10.0f, 1.0f}; //Positioned at (5, 0, 5)
         glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
         glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
         glEnable(GL_DEPTH_TEST);
