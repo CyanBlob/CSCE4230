@@ -1,15 +1,16 @@
 /*
     Andrew Thomas
     CSCE 4230
-    3/3/2016
-    Program 3
+    4/7/2016
+    Program 5
 
-    A simple simulation showing 5 planets, each with unique animations (double buffered)
+    A simple OpenGL program demoing lighting on the triangle mesh of a bivariate function
 
-    COMPILATION AND RUNNING: g++ space_Andrew_Thomas.cpp -o space_Andrew_Thomas -lGL -lGLU -lglut && ./space_Andrew_Thomas
+    COMPILATION AND RUNNING: g++ prog5_Andrew_Thomas.cpp -o prog5_Andrew_Thomas -lGL -lGLU -lglut && ./prog5_Andrew_Thomas
 
-    CONTROLS: 1,2,3 = change speed
-              y = toggle spause
+    CONTROLS: x, X = rotate around x axis
+              y, Y = rotate around y axis
+              z, Z = zoom in/out
               esc = quit
  */
 #include <stdlib.h>
@@ -24,11 +25,7 @@
 
 using namespace std;
 
-static int year = 0;
-static int speedScale = 1;
-//static bool paused = true; //Start off paused
-
-static int k = 30;
+static int k = 50;
 static float xrot;
 static float yrot;
 static float zoom = 10;
@@ -37,10 +34,12 @@ void init(void)
 {
         glClearColor (0.0, 0.0, 0.0, 0.0);
         glShadeModel (GL_SMOOTH);
+
+        //Enable lighting for the front of the mesh
         glEnable(GL_LIGHTING);
         glEnable(GL_LIGHT0);
-        GLfloat lightColor0[] = {0, 1, 1, 1.0}; //Color (0.5, 0.5, 0.5)
-        GLfloat lightPos0[] = {10.0f, 0.0f, 0.0f, 1.0f}; //Positioned at (4, 0, 8)
+        GLfloat lightColor0[] = {1, 1, 1, 0.0};
+        GLfloat lightPos0[] = {5.0f, 0.0f, 5.0f, 1.0f}; //Positioned at (5, 0, 5)
         glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
         glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
         glEnable(GL_DEPTH_TEST);
@@ -61,10 +60,10 @@ void display(void)
         glRotatef (yrot, 0.0, 1.0, 0.0);
         glRotatef (xrot, 1.0, 0.0, 0.0);
 
-        float v[(k + 1) * (k + 1)][3];
-        int ltri[2 * (k * k)][3];
-        float vn[(k + 1) * (k + 1)][3];
-        float tn[2 * (k * k)];
+        float v[(k + 1) * (k + 1)][3]; //Vertex coordinates
+        int ltri[2 * (k * k)][3];      //List of triangles
+        float vn[(k + 1) * (k + 1)][3]; //Vertex normals
+        float tn[2 * (k * k)];         //Triangle normals
         float h = 1.0/k;
         float j;
         float i;
@@ -89,15 +88,6 @@ void display(void)
                         indv = indv + 1;
                 }
         }
-
-        //Draw all vertices
-        /*int w;
-           for (w = 0; w <= (k + 1) * (k + 1); w++)
-           {
-                glBegin(GL_POINTS);
-                glVertex3f(v[w][0], v[w][1], v[w][2]);
-                glEnd();
-           }*/
 
         //Store triangles
         for(j = 1; j <= k; j++)
@@ -177,18 +167,8 @@ void display(void)
                 vn[i3][1] += tn[1];
                 vn[i3][2] += tn[2];
         }
+
         //Draw triangles
-        /*for(indt = 0; indt < 2 * (k * k); indt++)
-           {
-                glBegin(GL_TRIANGLES);
-                glVertex3f(v[ltri[indt][0]][0], v[ltri[indt][0]][1], v[ltri[indt][0]][2]);
-                glVertex3f(v[ltri[indt][1]][0], v[ltri[indt][1]][1], v[ltri[indt][1]][2]);
-                glVertex3f(v[ltri[indt][2]][0], v[ltri[indt][2]][1], v[ltri[indt][2]][2]);
-                glEnd();
-                //cout<<v[ltri[indt][0]][0]<<" "<<v[ltri[indt][0]][1]<<" "<<v[ltri[indt][0]][2]<<endl;
-                //cout<<v[ltri[indt][1]][0]<<" "<<v[ltri[indt][1]][1]<<" "<<v[ltri[indt][1]][2]<<endl;
-                //cout<<v[ltri[indt][2]][0]<<" "<<v[ltri[indt][2]][1]<<" "<<v[ltri[indt][2]][2]<<endl<<endl;
-           }*/
         indt = 0;
         for(j = 1; j <= k; j++)
         {
@@ -217,8 +197,6 @@ void display(void)
                         glVertex3f(v[ltri[indt + 1][2]][0], v[ltri[indt + 1][2]][1], v[ltri[indt + 1][2]][2]);
                         glEnd();
 
-                        //cout<<vn[ltri[indt][0]][0]<<" "<<vn[ltri[indt][0]][1]<<" "<<vn[ltri[indt][0]][2]<<endl;
-
                         indt = indt + 2;
                 }
         }
@@ -238,11 +216,9 @@ void reshape (int w, int h)
         {
                 glViewport((w-h)/2,0,h,h);
         }
-
-        glViewport (0, 0, (GLsizei) w, (GLsizei) h);
         glMatrixMode (GL_PROJECTION);
         glLoadIdentity ();
-        gluPerspective(zoom, (GLfloat) w/(GLfloat) h, 1.0, 20.0);
+        gluPerspective(zoom, 1, 1.0, 20.0);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         gluLookAt (0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
@@ -304,14 +280,6 @@ void createMenu(void)
 void keyboard (unsigned char key, int x, int y)
 {
         menu(key);
-}
-
-//This is my idle callback
-//Increment year to forward animation
-void rotateYear()
-{
-        year = (year + 1) % (720 * speedScale);
-        glutPostRedisplay();
 }
 
 
