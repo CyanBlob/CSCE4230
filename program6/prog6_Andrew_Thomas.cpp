@@ -1,16 +1,22 @@
 /*
     Andrew Thomas
     CSCE 4230
-    4/7/2016
-    Program 5
+    4/21/2016
+    Program 6
 
     A simple OpenGL program demoing lighting on the triangle mesh of a bivariate function
 
-    COMPILATION AND RUNNING: g++ prog5_Andrew_Thomas.cpp -o prog5_Andrew_Thomas -lGL -lGLU -lglut && ./prog5_Andrew_Thomas
+    COMPILATION AND RUNNING: g++ prog6_Andrew_Thomas.cpp -o prog6_Andrew_Thomas -lGL -lGLU -lglut && ./prog6_Andrew_Thomas
 
     CONTROLS: x, X = rotate around x axis
               y, Y = rotate around y axis
               z, Z = zoom in/out
+              d, D = scale Z values
+              f, F = toggle polygon mode
+              b, B = toggle bounding box
+              e, E = increase/decrease shininess
+              r, R = restore defaults
+              s, S = toggle lighting mode
               esc = quit
  */
 #include <stdlib.h>
@@ -26,16 +32,20 @@
 #define K 50
 using namespace std;
 
+//Transform and property variables
 static int k = K;
 static float xrot;
 static float yrot;
 static float zoom = 10;
-static float bivariateScale = 1;
-static float shininess = 1;
-static bool line = false;
-static bool boundBox = false;
-static bool flat = false;
+static float bivariateScale = 1; //z-axis scalar
+static float shininess = 1; //Shininess scalar
+static bool line = false; //Set polygonmode to line if true
+static bool boundBox = false; //Draw bounding box if true
+static float zMin; //Min z value (for bounding box)
+static float zMax;//Max z value (for bounding box)
+static bool flat = false; //Use flat shading if true
 
+//Triangle drawing variables
 static float tn[2 * (K * K)];         //Triangle normals
 static int ltri[2 * (K * K)][3];      //List of triangles
 static float v[(K + 1) * (K + 1)][3]; //Vertex coordinates
@@ -50,8 +60,7 @@ static int i2 = 0;
 static int i3 = 0;
 static int indv = 0;
 static int indt = 0;
-static float zMin;
-static float zMax;
+
 
 void init(void)
 {
@@ -86,6 +95,8 @@ void restoreDefaults()
   boundBox = false;
   flat = false;
 }
+
+//Create and store triangles
 void createTriangles()
 {
         indt = 0;
@@ -206,6 +217,7 @@ void display(void)
         glRotatef (yrot, 0.0, 1.0, 0.0);
         glRotatef (xrot, 1.0, 0.0, 0.0);
 
+        //Set polygon mode and shading mode
         if(line)
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         else
@@ -215,11 +227,12 @@ void display(void)
         else
                 glShadeModel (GL_SMOOTH);
 
-        /*GLfloat whiteSpecularMaterial[] = {1.0, 1.0, 1.0, 1.0};
-        glEnable ( GL_COLOR_MATERIAL ) ;
-        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, whiteSpecularMaterial);
 
-        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess);*/
+        //Enable material and set shininess
+        GLfloat whiteSpecularMaterial[] = {.1f, .1f, .1f, .1f};
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, whiteSpecularMaterial);
+        glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, shininess);
+        glEnable ( GL_COLOR_MATERIAL );
 
         //Draw triangles
         indt = 0;
@@ -351,12 +364,6 @@ void menu(int value){
                 glutPostRedisplay();
                 break;
         case 'f':
-                if(line)
-                        line = false;
-                else
-                        line = true;
-                glutPostRedisplay();
-                break;
         case 'F':
                 if(line)
                         line = false;
@@ -365,12 +372,6 @@ void menu(int value){
                 glutPostRedisplay();
                 break;
         case 'b':
-                if(boundBox)
-                        boundBox = false;
-                else
-                        boundBox = true;
-                glutPostRedisplay();
-                break;
         case 'B':
                 if(boundBox)
                         boundBox = false;
@@ -380,27 +381,22 @@ void menu(int value){
                 break;
         case 'e':
                 shininess *= .5;
+                if(shininess < 0)
+                    shininess = 0;
                 glutPostRedisplay();
                 break;
         case 'E':
                 shininess *= 2;
+                if(shininess > 128)
+                    shininess = 128;
                 glutPostRedisplay();
                 break;
         case 'r':
-                restoreDefaults();
-                glutPostRedisplay();
-                break;
         case 'R':
                 restoreDefaults();
                 glutPostRedisplay();
                 break;
         case 's':
-                if(flat)
-                        flat = false;
-                else
-                        flat = true;
-                glutPostRedisplay();
-                break;
         case 'S':
                 if(flat)
                         flat = false;
@@ -427,10 +423,16 @@ void createMenu(void)
         glutAddMenuEntry("X: decrease xrot", 'X');
         glutAddMenuEntry("y: increase yrot", 'y');
         glutAddMenuEntry("Y: decrease yrot", 'Y');
+        glutAddMenuEntry("z: increase zoom", 'z');
+        glutAddMenuEntry("Z: decrease zoom", 'Z');
         glutAddMenuEntry("d: decrease bivariate scale", 'd');
         glutAddMenuEntry("D: increase bivariate scale", 'D');
+        glutAddMenuEntry("e: decrease shininess", 'e');
+        glutAddMenuEntry("E: increase shininess", 'E');
         glutAddMenuEntry("f/F: toggle wireframe/polygon-fill", 'f');
+        glutAddMenuEntry("s/S: toggle flat/smooth shading", 'S');
         glutAddMenuEntry("b/B: toggle bounding box", 'b');
+        glutAddMenuEntry("r/R: restore defaults", 'r');
         glutAddMenuEntry("esc: Quit", 27);
 
         //Open the menu on right-click
