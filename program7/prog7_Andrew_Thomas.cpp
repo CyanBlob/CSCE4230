@@ -40,6 +40,9 @@
  */
 #include <GL/glut.h>
 #include <stdlib.h>
+#include <iostream>
+
+using namespace std;
 
 static GLfloat p0[3] = {-9.0, -9.0, 0.0};
 static GLfloat p1[3] = {-5.0, -8.0, 0.0};
@@ -62,6 +65,7 @@ static GLfloat ctrlpoints2[4][3] = {
     {p6[0], p6[1], p6[2]}};
 
 static float zoom = 10;
+static bool left_button_down = false;
 
 void init(void)
 {
@@ -72,12 +76,144 @@ void init(void)
    glEnable(GL_MAP1_VERTEX_3);
 }
 
+
+GLdouble ox=0.0,oy=0.0,oz=0.0;
+
+int findClosestPoint(float x, float y)
+{
+    int i;
+    int smallest;
+    float dists[7];
+    float smallestDist = 10000;
+
+    dists[0] = ((x - p0[0]) * (x - p0[0])) + ((y - p0[1]) * (y - p0[1]));
+    dists[1] = ((x - p1[0]) * (x - p1[0])) + ((y - p1[1]) * (y - p1[1]));
+    dists[2] = ((x - p2[0]) * (x - p2[0])) + ((y - p2[1]) * (y - p2[1]));
+    dists[3] = ((x - p3[0]) * (x - p3[0])) + ((y - p3[1]) * (y - p3[1]));
+    dists[4] = ((x - p4[0]) * (x - p4[0])) + ((y - p4[1]) * (y - p4[1]));
+    dists[5] = ((x - p5[0]) * (x - p5[0])) + ((y - p5[1]) * (y - p5[1]));
+    dists[6] = ((x - p6[0]) * (x - p6[0])) + ((y - p6[1]) * (y - p6[1]));
+
+    for (i = 0; i < 7; i++)
+    {
+        if(dists[i] < smallestDist)
+        {
+            smallestDist = dists[i]; 
+            smallest = i;
+        }
+    }
+
+    return smallest;
+}
+
+void mouse(int button, int state, int x, int y)
+{
+    if(button == GLUT_LEFT_BUTTON)
+    {
+        left_button_down = true;
+    }
+    else
+        left_button_down = false;
+}
+
+void mouseMotion(int x,int y) {
+
+    if(!left_button_down)
+        return;
+
+    GLint viewport[4];
+    GLdouble modelview[16],projection[16];
+    GLfloat wx=x,wy,wz;
+    
+    int smallest;
+    int i;
+    int j;
+
+    glGetIntegerv(GL_VIEWPORT,viewport);
+    y=viewport[3]-y;
+    wy=y;
+    glGetDoublev(GL_MODELVIEW_MATRIX,modelview);
+    glGetDoublev(GL_PROJECTION_MATRIX,projection);
+    glReadPixels(x,y,1,1,GL_DEPTH_COMPONENT,GL_FLOAT,&wz);
+    gluUnProject(wx,wy,wz,modelview,projection,viewport,&ox,&oy,&oz);
+    
+    smallest = findClosestPoint(ox, oy);
+
+    switch (smallest)
+    {
+        case 0:
+            p0[0] = ox;
+            p0[1] = oy;
+            break;
+        case 1:
+            p1[0] = ox;
+            p1[1] = oy;
+            break;
+        case 2:
+            p4[0] = p4[0] + (p2[0] - ox); 
+            p4[1] = p4[1] + (p2[1] - oy);
+            p2[0] = ox;
+            p2[1] = oy;
+            break;
+        case 3:
+            p2[0] = p2[0] - (p3[0] - ox);
+            p2[1] = p2[1] - (p3[1] - oy);
+            p4[0] = p4[0] - (p3[0] - ox);
+            p4[1] = p4[1] - (p3[1] - oy);
+            p3[0] = ox;
+            p3[1] = oy;
+            break;
+        case 4:
+            p2[0] =p2[0] + (p4[0] - ox);
+            p2[1] =p2[1] + (p4[1] - oy);
+            p4[0] = ox;
+            p4[1] = oy;
+            break;
+        case 5:
+            p5[0] = ox;
+            p5[1] = oy;
+            break;    
+        case 6:
+            p6[0] = ox;
+            p6[1] = oy;
+            break;
+    }
+
+    GLfloat tmpctrlpoints[4][3] = 
+    {
+        {p0[0], p0[1], p0[2]}, 
+        {p1[0], p1[1], p1[2]}, 
+        {p2[0], p2[1], p2[2]}, 
+        {p3[0], p3[1], p3[2]}
+    };
+
+
+    GLfloat tmpctrlpoints2[4][3] = 
+    {
+        {p3[0], p3[1], p3[2]}, 
+        {p4[0], p4[1], p4[2]}, 
+        {p5[0], p5[1], p5[2]}, 
+        {p6[0], p6[1], p6[2]}
+    };
+
+    for(i = 0; i < 4; i++)
+    {
+        for(j = 0; j < 3; j++)
+        {
+            ctrlpoints[i][j] = tmpctrlpoints[i][j];
+            ctrlpoints2[i][j] = tmpctrlpoints2[i][j];
+        }
+    }
+
+    glutPostRedisplay();
+}
+
 void display(void)
 {
    int i;
    int numPoints = 100;
 
-glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &ctrlpoints[0][0]);
+   glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &ctrlpoints[0][0]);
 
    glClear(GL_COLOR_BUFFER_BIT);
    glColor3f(1.0, 1.0, 0.0);
@@ -140,6 +276,9 @@ void menu(int value)
             zoom--;
             reshape(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
             glutPostRedisplay();
+            break; 
+        case 27:
+            exit(0);
     }
 }
 
@@ -147,9 +286,11 @@ void createMenu(void)
 {
     glutCreateMenu(menu);
 
-    glutAddMenuEntry("z: Zoom in",'z');
-    glutAddMenuEntry("z: Zoom out",'Z');
+    glutAddMenuEntry("z: Zoom out", 'z');
+    glutAddMenuEntry("Z: Zoom in", 'Z');
+    glutAddMenuEntry("esc: Quit", 27);
 
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
 void keyboard(unsigned char key, int x, int y)
@@ -157,11 +298,7 @@ void keyboard(unsigned char key, int x, int y)
    //Shut up, Clang
    x++;
    y++;
-   switch (key) {
-      case 27:
-         exit(0);
-         break;
-   }
+   menu(key);
 }
 
 int main(int argc, char** argv)
@@ -171,10 +308,13 @@ int main(int argc, char** argv)
    glutInitWindowSize (500, 500);
    glutInitWindowPosition (100, 100);
    glutCreateWindow (argv[0]);
+   createMenu();
    init ();
    glutDisplayFunc(display);
    glutReshapeFunc(reshape);
    glutKeyboardFunc (keyboard);
+   glutMouseFunc(mouse);
+   glutMotionFunc(mouseMotion); 
    glutMainLoop();
    return 0;
 }
