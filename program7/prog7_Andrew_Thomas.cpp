@@ -1,49 +1,28 @@
 /*
- * Copyright (c) 1993-1997, Silicon Graphics, Inc.
- * ALL RIGHTS RESERVED 
- * Permission to use, copy, modify, and distribute this software for 
- * any purpose and without fee is hereby granted, provided that the above
- * copyright notice appear in all copies and that both the copyright notice
- * and this permission notice appear in supporting documentation, and that 
- * the name of Silicon Graphics, Inc. not be used in advertising
- * or publicity pertaining to distribution of the software without specific,
- * written prior permission. 
+ * Andrew Thomas
+ * CSCE 4230
+ * 5/5/2016
+ * Program 7
  *
- * THE MATERIAL EMBODIED ON THIS SOFTWARE IS PROVIDED TO YOU "AS-IS"
- * AND WITHOUT WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR OTHERWISE,
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY OR
- * FITNESS FOR A PARTICULAR PURPOSE.  IN NO EVENT SHALL SILICON
- * GRAPHICS, INC.  BE LIABLE TO YOU OR ANYONE ELSE FOR ANY DIRECT,
- * SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY
- * KIND, OR ANY DAMAGES WHATSOEVER, INCLUDING WITHOUT LIMITATION,
- * LOSS OF PROFIT, LOSS OF USE, SAVINGS OR REVENUE, OR THE CLAIMS OF
- * THIRD PARTIES, WHETHER OR NOT SILICON GRAPHICS, INC.  HAS BEEN
- * ADVISED OF THE POSSIBILITY OF SUCH LOSS, HOWEVER CAUSED AND ON
- * ANY THEORY OF LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE
- * POSSESSION, USE OR PERFORMANCE OF THIS SOFTWARE.
- * 
- * US Government Users Restricted Rights 
- * Use, duplication, or disclosure by the Government is subject to
- * restrictions set forth in FAR 52.227.19(c)(2) or subparagraph
- * (c)(1)(ii) of the Rights in Technical Data and Computer Software
- * clause at DFARS 252.227-7013 and/or in similar or successor
- * clauses in the FAR or the DOD or NASA FAR Supplement.
- * Unpublished-- rights reserved under the copyright laws of the
- * United States.  Contractor/manufacturer is Silicon Graphics,
- * Inc., 2011 N.  Shoreline Blvd., Mountain View, CA 94039-7311.
+ * COMPILATION AND RUNNING: g++ prog7_Andrew_Thomas.cpp -o prog7_Andrew_Thomas -lGL -lGLU -lglut && ./prog7_Andrew_Thomas
  *
- * OpenGL(R) is a registered trademark of Silicon Graphics, Inc.
+ * CONTROLS: x,X = rotate about x axis
+ *           y,Y = rorate about y axis
+ *           w,a,s,d = pan
+ *           z,Z zoom in/out
+ *           esc = quit
+ *
+ *           click+drag = move point
  */
 
-/*  bezcurve.c			
- *  This program uses evaluators to draw a Bezier curve.
- */
 #include <GL/glut.h>
 #include <stdlib.h>
 #include <iostream>
+#include <cmath>
 
 using namespace std;
 
+//Points used as control points
 static GLfloat p0[3] = {-9.0, -9.0, 0.0};
 static GLfloat p1[3] = {-5.0, -8.0, 0.0};
 static GLfloat p2[3] = {-1.0, -6.0, 0.0};
@@ -52,6 +31,7 @@ static GLfloat p4[3] = {1.0,   6.0, 0.0};
 static GLfloat p5[3] = {5.0,   8.0, 0.0};
 static GLfloat p6[3] = {9.0,   9.0, 0.0};
 
+//Arrays of control points
 static GLfloat ctrlpoints[4][3] = {
     {p0[0], p0[1], p0[2]}, 
     {p1[0], p1[1], p1[2]}, 
@@ -64,48 +44,56 @@ static GLfloat ctrlpoints2[4][3] = {
     {p5[0], p5[1], p5[2]}, 
     {p6[0], p6[1], p6[2]}};
 
-static float zoom = 10;
-static bool left_button_down = false;
+static float zoom = 10; //Zoom level
+static bool left_button_down = false; //Whether the LMB is pressed
+
+//Translation variables
+static float xOffset = 0;
+static float yOffset = 0;
+
+//Rotaion variables
+static float xRot = 0; 
+static float yRot = 0;
 
 void init(void)
 {
    glClearColor(0.0, 0.0, 0.0, 0.0);
    glShadeModel(GL_FLAT);
-   //glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 8, &ctrlpoints[0][0]);
-   //glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &ctrlpoints2[0][0]);
    glEnable(GL_MAP1_VERTEX_3);
 }
 
+//Cursor x, y, and z values
+static GLdouble ox=0.0,oy=0.0,oz=0.0;
 
-GLdouble ox=0.0,oy=0.0,oz=0.0;
-
-int findClosestPoint(float x, float y)
+//Find the point closest to the cursor
+int findClosestPoint(float x, float y, float z)
 {
     int i;
-    int smallest;
+    int closest;
     float dists[7];
-    float smallestDist = 10000;
+    float closestDist = 10000;
 
-    dists[0] = ((x - p0[0]) * (x - p0[0])) + ((y - p0[1]) * (y - p0[1]));
-    dists[1] = ((x - p1[0]) * (x - p1[0])) + ((y - p1[1]) * (y - p1[1]));
-    dists[2] = ((x - p2[0]) * (x - p2[0])) + ((y - p2[1]) * (y - p2[1]));
-    dists[3] = ((x - p3[0]) * (x - p3[0])) + ((y - p3[1]) * (y - p3[1]));
-    dists[4] = ((x - p4[0]) * (x - p4[0])) + ((y - p4[1]) * (y - p4[1]));
-    dists[5] = ((x - p5[0]) * (x - p5[0])) + ((y - p5[1]) * (y - p5[1]));
-    dists[6] = ((x - p6[0]) * (x - p6[0])) + ((y - p6[1]) * (y - p6[1]));
+    dists[0] = ((x - p0[0]) * (x - p0[0])) + ((y - p0[1]) * (y - p0[1])); //+ ((z - p0[2]) * (z - p0[2]));
+    dists[1] = ((x - p1[0]) * (x - p1[0])) + ((y - p1[1]) * (y - p1[1])); //+ ((z - p1[2]) * (z - p1[2]));
+    dists[2] = ((x - p2[0]) * (x - p2[0])) + ((y - p2[1]) * (y - p2[1])); //+ ((z - p2[2]) * (z - p2[2]));
+    dists[3] = ((x - p3[0]) * (x - p3[0])) + ((y - p3[1]) * (y - p3[1])); //+ ((z - p3[2]) * (z - p3[2]));
+    dists[4] = ((x - p4[0]) * (x - p4[0])) + ((y - p4[1]) * (y - p4[1])); //+ ((z - p4[2]) * (z - p4[2]));
+    dists[5] = ((x - p5[0]) * (x - p5[0])) + ((y - p5[1]) * (y - p5[1])); //+ ((z - p5[2]) * (z - p5[2]));
+    dists[6] = ((x - p6[0]) * (x - p6[0])) + ((y - p6[1]) * (y - p6[1])); //+ ((z - p6[2]) * (z - p6[2]));
 
     for (i = 0; i < 7; i++)
     {
-        if(dists[i] < smallestDist)
+        if(dists[i] < closestDist)
         {
-            smallestDist = dists[i]; 
-            smallest = i;
+            closestDist = dists[i]; 
+            closest = i;
         }
     }
 
-    return smallest;
+    return closest;
 }
 
+//Check which mouse button was pressed
 void mouse(int button, int state, int x, int y)
 {
     if(button == GLUT_LEFT_BUTTON)
@@ -113,19 +101,34 @@ void mouse(int button, int state, int x, int y)
         left_button_down = true;
     }
     else
+    {
         left_button_down = false;
+    }
 }
 
-void mouseMotion(int x,int y) {
+//Reset cursor
+void passiveMouseMotion(int x, int y)
+{
+    glutSetCursor(GLUT_CURSOR_CROSSHAIR);
+    glutPostRedisplay();
+}
+
+//Check mouse movements, moving points as necessary
+void mouseMotion(int x,int y) 
+{
 
     if(!left_button_down)
+    {
         return;
+    }
+
+    glutSetCursor(GLUT_CURSOR_NONE); 
 
     GLint viewport[4];
     GLdouble modelview[16],projection[16];
     GLfloat wx=x,wy,wz;
     
-    int smallest;
+    int closest;
     int i;
     int j;
 
@@ -137,9 +140,13 @@ void mouseMotion(int x,int y) {
     glReadPixels(x,y,1,1,GL_DEPTH_COMPONENT,GL_FLOAT,&wz);
     gluUnProject(wx,wy,wz,modelview,projection,viewport,&ox,&oy,&oz);
     
-    smallest = findClosestPoint(ox, oy);
+    oz += 5;
+    ox -= xOffset;
+    oy -= yOffset;
+    closest = findClosestPoint(ox, oy, oz);
 
-    switch (smallest)
+    //Move the closest point, enforcing collinearity for P2, P3, and P4
+    switch (closest)
     {
         case 0:
             p0[0] = ox;
@@ -177,8 +184,11 @@ void mouseMotion(int x,int y) {
             p6[0] = ox;
             p6[1] = oy;
             break;
+        default:
+            break;
     }
 
+    //Temp control points, to be copied over regular control points
     GLfloat tmpctrlpoints[4][3] = 
     {
         {p0[0], p0[1], p0[2]}, 
@@ -213,6 +223,14 @@ void display(void)
    int i;
    int numPoints = 100;
 
+   glPushMatrix();
+
+   //Translate/rotate
+   glTranslatef(xOffset, yOffset, 0);
+   glRotatef(xRot, 1, 0, 0);
+   glRotatef(yRot, 0, 1, 0);
+
+   //Draw first curve
    glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &ctrlpoints[0][0]);
 
    glClear(GL_COLOR_BUFFER_BIT);
@@ -221,6 +239,7 @@ void display(void)
       for (i = 0; i <= numPoints; i++) 
          glEvalCoord1f((GLfloat) i/numPoints);
    glEnd();
+
    /* The following code displays the control points as dots. */
    glPointSize(5.0);
    glColor3f(1.0, 1.0, 0.0);
@@ -229,7 +248,7 @@ void display(void)
          glVertex3fv(&ctrlpoints[i][0]);
    glEnd();
    
-   //Draw second curve (hopefully)
+   //Draw second curve
    glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &ctrlpoints2[0][0]);
 
    glColor3f(0.0, 1.0, 1.0);
@@ -244,7 +263,8 @@ void display(void)
          glVertex3fv(&ctrlpoints2[i][0]);
    glEnd();
 
-   glFlush();
+   glPopMatrix();
+   glutSwapBuffers();
 
 }
 
@@ -255,10 +275,10 @@ void reshape(int w, int h)
    glLoadIdentity();
    if (w <= h)
       glOrtho(-zoom, zoom, -zoom*(GLfloat)h/(GLfloat)w, 
-               zoom*(GLfloat)h/(GLfloat)w, -5.0, 5.0);
+               zoom*(GLfloat)h/(GLfloat)w, -25.0, 25.0);
    else
       glOrtho(-zoom*(GLfloat)w/(GLfloat)h, 
-               zoom*(GLfloat)w/(GLfloat)h, -zoom, zoom, -5.0, 5.0);
+               zoom*(GLfloat)w/(GLfloat)h, -zoom, zoom, -25.0, 25.0);
    glMatrixMode(GL_MODELVIEW);
    glLoadIdentity();
 }
@@ -276,7 +296,47 @@ void menu(int value)
             zoom--;
             reshape(glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT));
             glutPostRedisplay();
+            break;
+        case 'x':
+            xRot += 2;
+            if(xRot > 90)
+                xRot = 90;
+            glutPostRedisplay();
+            break;
+        case 'X':
+            xRot -= 2;
+            if(xRot < 0)
+                xRot = 0;
+            glutPostRedisplay();
             break; 
+        case 'y':
+            yRot += 2;
+            if(yRot > 90)
+                yRot = 90;
+            glutPostRedisplay();
+            break;
+        case 'Y':
+            yRot -= 2;
+            if(yRot < 0)
+                yRot = 0;
+            glutPostRedisplay();
+            break;
+        case 'd':
+            xOffset++;
+            glutPostRedisplay();
+            break;
+        case 'a':
+            xOffset--;
+            glutPostRedisplay();
+            break;
+        case 's':
+            yOffset--;
+            glutPostRedisplay();
+            break;
+        case 'w':
+            yOffset++;
+            glutPostRedisplay();
+            break;
         case 27:
             exit(0);
     }
@@ -288,6 +348,14 @@ void createMenu(void)
 
     glutAddMenuEntry("z: Zoom out", 'z');
     glutAddMenuEntry("Z: Zoom in", 'Z');
+    glutAddMenuEntry("x: Rotate x", 'x');
+    glutAddMenuEntry("X: Rotate x", 'X');
+    glutAddMenuEntry("y: Rotate y", 'y');
+    glutAddMenuEntry("Y: Rotate y", 'Y');
+    glutAddMenuEntry("w: Pan up", 'w');
+    glutAddMenuEntry("s: Pan down", 's');
+    glutAddMenuEntry("a: Pan left", 'a');
+    glutAddMenuEntry("d: Pan right", 'd');
     glutAddMenuEntry("esc: Quit", 27);
 
     glutAttachMenu(GLUT_RIGHT_BUTTON);
@@ -295,9 +363,6 @@ void createMenu(void)
 
 void keyboard(unsigned char key, int x, int y)
 {
-   //Shut up, Clang
-   x++;
-   y++;
    menu(key);
 }
 
@@ -315,6 +380,7 @@ int main(int argc, char** argv)
    glutKeyboardFunc (keyboard);
    glutMouseFunc(mouse);
    glutMotionFunc(mouseMotion); 
+   glutPassiveMotionFunc(passiveMouseMotion); 
    glutMainLoop();
    return 0;
 }
